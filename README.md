@@ -337,13 +337,17 @@ These design decisions make the system fast, cost-efficient, and capable of hand
 
 ## Future Improvements
 
-- Confidence-based manual review queue
-- Teaching Assistant approval workflow
-- Advanced analytics dashboard
-- Export to Excel and PDF reports
-- Docker-based deployment
-- Cloud deployment
+The current architecture was intentionally designed so that the following features can be added without major changes to the core system.
 
+- Teaching Assistant review and mark editing workflow
+- Instructor-controlled permissions for assigning and managing TAs
+- Re-evaluation workflow after TA or instructor modifications
+- Automatic recalculation of total marks when question-level scores are changed
+- Advanced analytics and performance reports
+- Export of results to Excel and PDF
+- Visual review of plagiarism clusters and suspicious answer groups
+- Shared course workspace for rubrics, answer keys, and grading resources (similar to Google Drive)
+- Docker-based and cloud deployment
 
 ---
 
