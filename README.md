@@ -100,7 +100,7 @@ frontend/
 
 # ⭐ Core Engineering Highlights
 
-This project demonstrates several advanced engineering concepts rarely found in student projects:
+This project demonstrates several advanced engineering concepts:
 
 - Multi-provider OCR with automatic failover
 - LangGraph-based workflow orchestration
@@ -342,21 +342,4 @@ This results in a system that is:
 
 ---
 
-# 👩‍💻 Engineering Focus
 
-This project emphasizes:
-
-- System design
-- Optimization
-- Full-stack architecture
-- Reliability
-- Maintainability
-- Production readiness
-
-The goal was not simply to integrate AI APIs, but to understand and implement the engineering decisions that make AI systems efficient, robust, and commercially viable.
-
----
-
-# 📄 License
-
-This project is intended for educational, research, and portfolio purposes.
