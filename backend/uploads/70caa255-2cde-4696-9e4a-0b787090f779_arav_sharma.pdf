@@ -1,0 +1,23 @@
+Aarav Sharma
+Student ID: 2026042
+
+Data Structures and Algorithms – Midterm Examination
+
+Question 1 (5 Marks):
+What is the time complexity of Binary Search? Explain briefly.
+
+Answer:
+Binary Search has a time complexity of O(log n).
+
+It follows the divide-and-conquer strategy. In each iteration, the algorithm
+checks the middle element of the sorted array against the target value.
+
+If the target is less than the middle element, the search proceeds in the
+left half of the array. If the target is greater, the search proceeds in the
+right half.
+
+Thus, with every step, half of the remaining elements are discarded. Because
+the search interval keeps shrinking by a factor of two, the number of required
+comparisons increases logarithmically with the number of elements.
+
+Therefore, the overall time complexity of Binary Search is O(log n).
