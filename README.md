@@ -1,13 +1,13 @@
 # GradeOps
 ### AI-Powered Automated Exam Grading Platform
 
-GradeOps is an AI-powered platform that automates the grading of scanned examination answer sheets. It extracts text from uploaded PDFs, routes answers question-wise, evaluates responses using instructor-defined rubrics, and generates marks with feedback.
+GradeOps is an AI-powered platform that automates the grading of scanned examination answer sheets. It extracts text from uploaded PDFs, routes answers question-wise, evaluates responses using instructor-defined rubrics, and generates marks with detailed feedback.
 
-The project is being built as a well-structured MVP with a production-oriented architecture. The current implementation focuses on core grading functionality while keeping the system modular and extensible for future enhancements.
+The project is being developed as a full-stack MVP with a strong focus on system design, optimization, and modular architecture. The goal is not only to build an automated grading system, but also to understand and implement the engineering decisions that make AI systems efficient, reliable, and scalable.
 
 ---
 
-# 🎯 Project Goal
+## Project Goal
 
 The objective of GradeOps is to reduce the time and effort required for manual grading of descriptive answer sheets by combining:
 
@@ -17,10 +17,11 @@ The objective of GradeOps is to reduce the time and effort required for manual g
 - Intelligent caching
 - Parallel processing
 - Explainable rubric-based grading
+- Cross-student plagiarism detection
 
 ---
 
-# 🏗️ System Architecture
+## System Architecture
 
 ```text
 Streamlit Frontend
@@ -38,43 +39,127 @@ Embedding Precomputation
         ↓
 LangGraph Workflow
    ├── Routing Node
-   └── Grading Node
+   ├── Grading Node
+   └── Verification Node
         ↓
-Marks + Feedback
+Marks + Feedback + Plagiarism Flags
 ```
 
 ---
 
-# 🖥️ Frontend (Streamlit)
+## Technology Stack
 
-A lightweight instructor dashboard is being developed using Streamlit.
+### Backend
+- FastAPI
+- Python
+- PostgreSQL
+- SQLAlchemy
+- LangGraph
 
-### Planned Features
+### AI / NLP
+- Sentence Transformers (`all-MiniLM-L6-v2`)
+- Google Gemini (used only for rare unknown question patterns)
 
-- Login and authentication
-- Course and exam management
-- Question setup
-- PDF answer sheet upload
-- OCR monitoring
-- Automated grading
-- Results visualization
-- Analytics dashboard
+### OCR
+- Groq Vision
+- OpenRouter Vision
+- EasyOCR
 
-### Frontend Structure
+### Frontend
+- Streamlit
+- Plotly
+- Pandas
+
+### Concurrency
+- ThreadPoolExecutor
+
+---
+
+## Project Structure
 
 ```text
-frontend/
-├── app.py
-├── pages/
-├── components/
-└── utils/
+GradeOps/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── grading.py
+│   │   │
+│   │   ├── routers/
+│   │   │   └── users.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── ocr_service.py
+│   │   │   ├── multi_ocr_service.py
+│   │   │   ├── groq_ocr_service.py
+│   │   │   ├── openrouter_ocr_service.py
+│   │   │   ├── easyocr_service.py
+│   │   │   ├── gemini_ocr_service.py
+│   │   │   ├── gemini_client.py
+│   │   │   ├── routing_service.py
+│   │   │   ├── grading_service.py
+│   │   │   ├── similarity_service.py
+│   │   │   ├── plagiarism_service.py
+│   │   │   ├── verification_service.py
+│   │   │   └── question_analysis_service.py
+│   │   │
+│   │   ├── workflows/
+│   │   │   └── grading_workflow.py
+│   │   │
+│   │   ├── auth.py
+│   │   ├── jwt_handler.py
+│   │   ├── database.py
+│   │   └── main.py
+│   │
+│   ├── uploads/
+│   ├── .env
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── app.py
+│   ├── pages/
+│   │   ├── login.py
+│   │   ├── register.py
+│   │   ├── dashboard.py
+│   │   ├── courses.py
+│   │   ├── exams.py
+│   │   ├── questions.py
+│   │   ├── upload_pdf.py
+│   │   ├── run_ocr.py
+│   │   ├── grade_exam.py
+│   │   └── results.py
+│   │
+│   ├── utils/
+│   │   ├── api_client.py
+│   │   └── session_state.py
+│   │
+│   └── requirements.txt
+│
+├── .gitignore
+└── README.md
 ```
 
 ---
 
-# ⚙️ Backend (FastAPI)
+## Frontend Overview
 
-The backend handles the complete grading pipeline and exposes APIs for OCR and grading.
+The frontend is built using Streamlit to provide a clean and interactive dashboard for instructors.
+
+### Current Features
+
+- User registration and login
+- Course management
+- Exam creation
+- Question setup
+- PDF answer sheet upload
+- OCR execution
+- Automated grading
+- Results visualization
+
+---
+
+## Backend Overview
+
+The FastAPI backend handles the complete grading pipeline and exposes APIs for OCR and grading.
 
 ### Core Responsibilities
 
@@ -84,24 +169,24 @@ The backend handles the complete grading pipeline and exposes APIs for OCR and g
 - OCR execution
 - Answer routing
 - Automated grading
-- Result storage and retrieval
-
----
-## 🧠 Key Design Decisions and Optimizations
-
-The architecture of GradeOps was designed to minimize API usage, reduce redundant computation, and make the system capable of processing large batches of answer sheets efficiently.
+- Plagiarism detection
+- Result retrieval
 
 ---
 
-### Modular Services + LangGraph Workflow
+## Key Design Decisions and Optimizations
 
-The system is divided into independent services such as OCR, routing, question analysis, grading, and caching. These services are connected through a LangGraph workflow.
+The architecture was designed to minimize API usage, avoid redundant computation, and process large batches of answer sheets efficiently.
+
+### Modular Services with LangGraph Workflow
+
+Each responsibility (OCR, routing, grading, plagiarism detection, verification, and caching) is implemented as an independent service. These services are coordinated through a LangGraph workflow.
 
 ```text
-OCR → Routing → Grading → Store Results
+OCR → Routing → Grading → Verification → Store Results
 ```
 
-This approach keeps each component focused on a single responsibility and makes the system easier to debug, extend, and maintain.
+This keeps the code modular and makes it easy to add new steps later without rewriting the existing pipeline.
 
 ---
 
@@ -113,9 +198,9 @@ OCR providers are chained in sequence:
 Groq Vision → OpenRouter Vision → EasyOCR
 ```
 
-If one provider fails or exhausts its free quota, the next provider is used automatically. EasyOCR serves as an unlimited offline fallback.
+If one provider fails or exhausts its free-tier quota, the next provider is used automatically. EasyOCR acts as an unlimited offline fallback.
 
-This ensures that OCR remains available even when external API limits are reached.
+This ensures OCR remains available even when external APIs are unavailable.
 
 ---
 
@@ -131,31 +216,19 @@ Each question is analyzed to determine:
 
 The result is stored permanently in PostgreSQL using a hash of the question text, expected answer, and rubric.
 
-```text
-Question
-   ↓
-Check Cache
-   ↓
-Found? → Reuse Stored Result
-   ↓
-Not Found → Analyze Once
-   ↓
-Store Permanently
-```
+If a completely new question pattern requires Gemini, it is analyzed only once and then reused for all future answer sheets and exams with the same pattern.
 
-This means that even if a completely new question type requires Gemini, it is analyzed only once and the result is reused for all remaining answer sheets and future exams with the same pattern.
-
-This significantly reduces API calls and allows the system to build a growing knowledge base over time.
+This significantly reduces API calls and allows the system to build a reusable knowledge base over time.
 
 ---
 
 ### Rule-Based + LLM Hybrid Classification
 
-Most common question types (MCQ, numerical, true/false, essays, conceptual, code questions) are identified using deterministic rules.
+Common question types such as MCQ, numerical, true/false, code, essay, and conceptual questions are classified using deterministic rules.
 
 Gemini is used only when the system encounters a pattern that cannot be recognized by existing rules.
 
-This minimizes token usage while preserving flexibility for unusual question formats.
+This combines flexibility with very low API cost.
 
 ---
 
@@ -163,15 +236,20 @@ This minimizes token usage while preserving flexibility for unusual question for
 
 OCR text is split into question-wise answers using regular expressions instead of an LLM.
 
-This makes routing extremely fast, predictable, and completely free of API costs.
+This makes routing fast, predictable, and completely free of API usage.
 
 ---
 
 ### Local Semantic Grading
 
-Student answers are graded locally using Sentence Transformers (`all-MiniLM-L6-v2`) and cosine similarity against rubric criteria and expected answers.
+Student answers are graded locally using Sentence Transformers and cosine similarity against rubric criteria and expected answers.
 
-This eliminates per-answer API calls and supports criterion-level partial marking with explainable feedback.
+This eliminates per-answer API calls while supporting:
+
+- Criterion-level scoring
+- Partial marking
+- Confidence scores
+- Detailed feedback
 
 ---
 
@@ -183,9 +261,15 @@ For each question, the system computes once:
 - Criterion embeddings
 - Expected answer embedding
 
-These are stored in memory and reused for all answer sheets in the exam.
+These are reused for every answer sheet in the exam, avoiding redundant embedding generation.
 
-This avoids repeatedly generating the same embeddings and substantially improves grading speed.
+---
+
+### Cross-Student Plagiarism Detection
+
+Student answers are compared pairwise using embeddings and question-specific plagiarism strategies.
+
+Highly similar answers are flagged for instructor review, enabling automated academic integrity checks without external APIs.
 
 ---
 
@@ -193,11 +277,11 @@ This avoids repeatedly generating the same embeddings and substantially improves
 
 Answer sheets are processed concurrently using `ThreadPoolExecutor`.
 
-This allows multiple scripts to be graded simultaneously and significantly reduces total processing time for large classes.
+This significantly reduces grading time for large classes.
 
 ---
 
-## ⚡ Optimization Summary
+## Optimization Summary
 
 | Optimization | Benefit |
 |------------|---------|
@@ -206,17 +290,18 @@ This allows multiple scripts to be graded simultaneously and significantly reduc
 | Deterministic routing | Eliminates routing API calls |
 | Local semantic grading | Eliminates per-answer grading API calls |
 | Embedding precomputation | Avoids redundant embedding generation |
+| Cross-student plagiarism detection | Detects suspicious similarity locally |
 | Parallel processing | Faster grading of large batches |
 | Multi-provider OCR | Prevents downtime due to API limits |
 | EasyOCR fallback | Unlimited offline OCR |
 
 ---
 
-## 📈 Scalability Impact
+## Scalability Example
 
 For an exam with 200 answer sheets and 5 questions:
 
-- Question analysis runs only **5 times** instead of **1,000 times**
+- Question analysis runs only 5 times instead of 1,000 times
 - Rubric embeddings are computed once per question
 - Grading is performed locally without repeated API calls
 - Answer sheets are processed in parallel
@@ -225,85 +310,18 @@ These design decisions make the system fast, cost-efficient, and capable of hand
 
 ---
 
-## 📈 Scalability Impact
+## Main API Endpoints
 
-These design decisions allow GradeOps to process large exam batches efficiently.
-
-For example, with 200 answer sheets and 5 questions each:
-
-- Question analysis: 5 total analyses (instead of 1,000)
-- Rubric embeddings: computed once per question
-- Grading: performed locally using embeddings
-- OCR: resilient to API quota exhaustion
-- Processing: executed in parallel across multiple CPU cores
-
-As a result, the platform remains fast, cost-efficient, and robust while maintaining grading quality.
-
----
-
-# 🛠 Technology Stack
-
-## Backend
-- FastAPI
-- Python
-- PostgreSQL
-- SQLAlchemy
-- LangGraph
-
-## AI / NLP
-- Sentence Transformers (`all-MiniLM-L6-v2`)
-- Google Gemini (fallback analysis)
-
-## OCR
-- Groq Vision
-- OpenRouter Vision
-- EasyOCR
-
-## Frontend
-- Streamlit
-- Plotly
-- Pandas
-
----
-
-# 📁 Project Structure
-
-```text
-GradeOps/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   ├── services/
-│   │   ├── workflows/
-│   │   ├── models/
-│   │   ├── database.py
-│   │   └── main.py
-│   ├── uploads/
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── app.py
-│   ├── pages/
-│   ├── components/
-│   └── utils/
-│
-└── README.md
-```
-
----
-
-# 🔌 Main API Endpoints
-
-## OCR
+### OCR
 - `POST /answer-sheets/{answer_sheet_id}/run-ocr`
 - `GET /answer-sheets/{answer_sheet_id}/ocr`
 
-## Grading
+### Grading
 - `POST /grading/grade-exam/{exam_id}`
 
 ---
 
-# 📊 Example Output
+## Example Output
 
 ```json
 {
@@ -317,38 +335,35 @@ GradeOps/
 
 ---
 
-# 🚀 Future Improvements
+## Future Improvements
 
-The following enhancements are planned as the project evolves:
-
-- Cross-student plagiarism detection
 - Confidence-based manual review queue
 - Teaching Assistant approval workflow
 - Advanced analytics dashboard
 - Export to Excel and PDF reports
 - Docker-based deployment
 - Cloud deployment
-- LMS integrations (Moodle, Canvas, Google Classroom)
 
 ---
 
-# 🏆 Why This Project Is Strong
+## Why This Project Stands Out
 
-GradeOps demonstrates practical software engineering and AI system design concepts including:
+GradeOps combines practical AI techniques with strong software engineering principles:
 
 - Workflow orchestration
 - Multi-provider fault tolerance
 - Persistent caching
 - Embedding optimization
 - Parallel processing
-- Explainable AI grading
+- Explainable grading
+- Cross-student plagiarism detection
 - Modular full-stack architecture
 
-The project emphasizes understanding and implementing efficient system design rather than simply calling external APIs.
+The project emphasizes understanding system design and optimization rather than simply integrating external APIs.
 
 ---
 
-# ▶️ Running the Backend
+## Running the Backend
 
 ```bash
 cd backend
@@ -362,20 +377,22 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# ▶️ Running the Frontend
+## Running the Frontend
 
 ```bash
 cd frontend
-pip install streamlit plotly pandas requests
+pip install -r requirements.txt
 streamlit run app.py
 ```
 
 ---
 
-# 💡 Development Philosophy
+## Development Philosophy
 
 > Build a simple implementation today, but structure the code so that future enhancements can be added without major rewrites.
 
 This approach keeps the current system understandable while preserving a strong architectural foundation for future growth.
+
+
 
 
