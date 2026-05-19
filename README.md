@@ -1,9 +1,9 @@
 # GradeOps
 ### AI-Powered Automated Exam Grading Platform
 
-GradeOps is an AI-powered platform that automates the grading of scanned examination answer sheets. It extracts text from uploaded PDFs, routes answers question-wise, evaluates responses using instructor-defined rubrics, and generates marks with detailed feedback.
+GradeOps is a platform for automating the evaluation of scanned examination answer sheets. The system extracts text from uploaded PDFs, organizes responses question-wise, grades answers using instructor-defined rubrics, and generates marks with feedback.
 
-The project is being developed as a full-stack MVP with a strong focus on system design, optimization, and modular architecture. The goal is not only to build an automated grading system, but also to understand and implement the engineering decisions that make AI systems efficient, reliable, and scalable.
+This project is being developed as a full-stack MVP to explore the practical application of AI and software engineering in education. The implementation emphasizes modular architecture, optimization, and cost-efficient use of AI services.
 
 ---
 
@@ -386,12 +386,6 @@ streamlit run app.py
 ```
 
 ---
-
-## Development Philosophy
-
-> Build a simple implementation today, but structure the code so that future enhancements can be added without major rewrites.
-
-This approach keeps the current system understandable while preserving a strong architectural foundation for future growth.
 
 
 
