@@ -87,54 +87,254 @@ The backend handles the complete grading pipeline and exposes APIs for OCR and g
 - Result storage and retrieval
 
 ---
+## 🧠 Key Design Decisions and Performance Optimizations
 
-# 🧠 Key Design Decisions
+The core objective of GradeOps is to process large batches of answer sheets efficiently while minimizing API usage and preserving grading quality. Several architectural decisions were made specifically to ensure the system can scale to hundreds of answer sheets without major redesign.
 
-## Modular Service Architecture
+---
 
-Each responsibility is implemented as an independent service (OCR, routing, grading, caching), making the system easier to understand, test, and extend.
+### 1. Modular Service Architecture + LangGraph Workflow
 
-## LangGraph Workflow Orchestration
+The system is divided into independent services such as OCR, routing, question analysis, grading, and caching. Each service has a single responsibility and can be developed, tested, and replaced independently.
 
-The grading process is modeled as a graph of nodes rather than a single monolithic function, enabling clean separation of responsibilities.
+These services are coordinated using LangGraph, where the grading pipeline is modeled as a sequence of nodes rather than a single large function.
 
-## Multi-Provider OCR
+```text
+OCR → Routing → Grading → Verification → Store Results
+```
 
-OCR providers are chained to maximize reliability and free-tier utilization:
+**Why this decision was taken:**
+
+- Keeps the codebase organized and easier to understand.
+- Prevents business logic from becoming tightly coupled.
+- Makes debugging simpler because each stage is isolated.
+- Allows new workflow nodes (e.g., plagiarism detection) to be added later without rewriting existing logic.
+
+---
+
+### 2. Multi-Provider OCR with Automatic Failover
+
+OCR is one of the most token-intensive stages. To avoid service interruption due to quota exhaustion, multiple OCR providers are chained together.
 
 ```text
 Groq Vision → OpenRouter Vision → EasyOCR
 ```
 
-## Persistent Question Analysis Cache
+If one provider fails or its free-tier quota is exhausted, the next provider is used automatically. EasyOCR serves as an unlimited offline fallback.
 
-Question patterns are analyzed once and stored in PostgreSQL so future exams can reuse the same logic without repeated LLM calls.
+**Why this decision was taken:**
 
-## Per-Exam Embedding Precomputation
-
-Rubric and expected-answer embeddings are generated once and reused across all answer sheets in the exam.
-
-## Parallel Processing
-
-Multiple answer sheets are graded concurrently using thread pools to significantly reduce processing time.
-
-## Rule-Based + LLM Hybrid Classification
-
-Common question types are recognized using deterministic rules, while Gemini is used only for rare, previously unseen patterns.
+- Prevents grading from stopping when API limits are reached.
+- Maximizes the use of free-tier credits.
+- Reduces dependence on a single vendor.
+- Guarantees that OCR remains available even when all external APIs fail.
 
 ---
 
-# ⚡ Performance Optimizations
+### 3. Persistent Question Analysis Cache
 
-| Optimization | Benefit |
-|------------|----------|
+Each question is analyzed only once to determine:
+
+- Question type
+- Grading strategy
+- Plagiarism strategy
+- Similarity thresholds
+- Review priority
+
+The result is stored permanently in PostgreSQL using a SHA-256 hash of the question text, expected answer, and rubric as the cache key.
+
+```text
+Question
+   ↓
+Check Database Cache
+   ↓
+Found? → Reuse
+   ↓
+Not Found → Rule-Based Analysis
+   ↓
+Unknown Pattern → Gemini Fallback
+   ↓
+Store Permanently
+```
+
+**Why this decision was taken:**
+
+Without caching, the same question would be analyzed repeatedly for every answer sheet. For example:
+
+- 200 answer sheets × 5 questions = 1,000 analyses
+
+With caching:
+
+- 5 analyses total
+
+This drastically reduces API usage and processing time while allowing the system to learn reusable handling strategies across future exams.
+
+---
+
+### 4. Rule-Based + LLM Hybrid Classification
+
+Most question types are recognized using deterministic rules, including:
+
+- MCQ
+- Multiple Select
+- Numerical
+- True/False
+- Match the Following
+- Code Questions
+- Essays
+- Conceptual Questions
+
+Gemini is used only when the system encounters a completely new pattern that cannot be recognized by existing rules.
+
+**Why this decision was taken:**
+
+- Common cases are handled instantly with no API cost.
+- LLM calls are reserved only for rare edge cases.
+- New patterns are learned once and cached permanently.
+- Balances flexibility with cost efficiency.
+
+---
+
+### 5. Deterministic Answer Routing
+
+The routing service uses regular expressions and rule-based parsing to split OCR text into question-wise answers instead of relying on an LLM.
+
+**Why this decision was taken:**
+
+- Zero API calls.
+- Extremely fast.
+- Predictable and repeatable behavior.
+- Scales efficiently to hundreds of answer sheets.
+
+---
+
+### 6. Local Semantic Grading
+
+The grading engine uses Sentence Transformers (`all-MiniLM-L6-v2`) to generate embeddings and compare student answers against rubric criteria and expected answers.
+
+The grading process is entirely local and does not require an API call for every answer.
+
+```text
+Student Answer
+      ↓
+Generate Embedding Once
+      ↓
+Compare with Rubric Criteria
+      ↓
+Award Criterion Marks
+      ↓
+Compute Confidence
+      ↓
+Optional Escalation if Needed
+```
+
+**Why this decision was taken:**
+
+- Eliminates per-answer API costs.
+- Provides strong semantic understanding.
+- Supports partial marking.
+- Works well for conceptual, essay, and situational questions.
+- Enables processing of hundreds of scripts on a standard laptop.
+
+---
+
+### 7. Per-Exam Embedding Precomputation
+
+Before grading begins, the system computes once per question:
+
+- Parsed rubric criteria
+- Criterion embeddings
+- Expected answer embedding
+
+These are stored in memory and reused for every answer sheet in the exam.
+
+**Why this decision was taken:**
+
+Without caching:
+
+- 200 answer sheets × 4 rubric criteria = 800 criterion embeddings
+
+With precomputation:
+
+- 4 criterion embeddings total
+
+This significantly reduces redundant computation and improves throughput.
+
+---
+
+### 8. Parallel Processing of Answer Sheets
+
+Answer sheets are graded concurrently using `ThreadPoolExecutor`.
+
+```text
+200 Answer Sheets
+        ↓
+ThreadPoolExecutor
+        ↓
+Multiple Sheets Processed Simultaneously
+```
+
+**Why this decision was taken:**
+
+- Makes effective use of available CPU cores.
+- Reduces total grading time substantially.
+- Allows the platform to handle large batches efficiently.
+
+---
+
+### 9. Confidence-Based LLM Escalation (Planned)
+
+Most grading is performed locally. In future versions, only low-confidence answers will be escalated to an LLM or flagged for manual review.
+
+**Why this decision was taken:**
+
+- Preserves grading quality for ambiguous responses.
+- Keeps API usage extremely low.
+- Enables human-in-the-loop review for uncertain cases.
+
+---
+
+### 10. Local Plagiarism Detection (Planned)
+
+Plagiarism detection will use embeddings and similarity clustering rather than external APIs.
+
+**Why this decision was taken:**
+
+- No recurring API costs.
+- Scales naturally to large cohorts.
+- Integrates with the same embedding infrastructure used for grading.
+
+---
+
+## ⚡ Summary of Optimizations
+
+| Optimization | Primary Benefit |
+|------------|----------------|
 | Persistent PostgreSQL cache | Avoid repeated LLM analysis |
-| In-memory cache | Reduce database queries |
-| Embedding precomputation | Eliminate redundant computations |
+| In-memory runtime cache | Reduce database queries |
+| Deterministic routing | Eliminate routing API calls |
+| Local semantic grading | Eliminate per-answer grading API calls |
+| Embedding precomputation | Avoid redundant embedding generation |
 | Parallel processing | Faster grading of large batches |
 | Rule-based classification | Lower API usage |
 | Multi-provider OCR | Improved reliability |
 | EasyOCR fallback | Unlimited offline OCR |
+
+---
+
+## 📈 Scalability Impact
+
+These design decisions allow GradeOps to process large exam batches efficiently.
+
+For example, with 200 answer sheets and 5 questions each:
+
+- Question analysis: 5 total analyses (instead of 1,000)
+- Rubric embeddings: computed once per question
+- Grading: performed locally using embeddings
+- OCR: resilient to API quota exhaustion
+- Processing: executed in parallel across multiple CPU cores
+
+As a result, the platform remains fast, cost-efficient, and robust while maintaining grading quality.
 
 ---
 
