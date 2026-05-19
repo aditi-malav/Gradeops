@@ -344,22 +344,6 @@ These design decisions make the system fast, cost-efficient, and capable of hand
 - Docker-based deployment
 - Cloud deployment
 
----
-
-## Why This Project Stands Out
-
-GradeOps combines practical AI techniques with strong software engineering principles:
-
-- Workflow orchestration
-- Multi-provider fault tolerance
-- Persistent caching
-- Embedding optimization
-- Parallel processing
-- Explainable grading
-- Cross-student plagiarism detection
-- Modular full-stack architecture
-
-The project emphasizes understanding system design and optimization rather than simply integrating external APIs.
 
 ---
 
