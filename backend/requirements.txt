@@ -117,3 +117,6 @@ uuid_utils==0.15.0
 uvicorn==0.47.0
 xxhash==3.7.0
 zstandard==0.25.0
+google-generativeai
+grpcio>=1.62,<2.0
+grpcio-status>=1.62,<2.0
